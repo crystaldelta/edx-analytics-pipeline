@@ -149,13 +149,24 @@ class BaseHiveHistoryTask(DatabaseImportMixin, HiveTableTask):
         # This is magically copied from HiveTableFromQueryTask.
         return get_target_from_url(self.partition_location.rstrip('/') + '/')
 
+    def intermediate_columns(self):
+        # BOOLEAN types in Hive have to be converted explicitly, because they cannot be coerced into Strings.  (Same with BINARY, FWIW.)
+        coalesce_pairs = list()
+        for (name, type) in self.source_columns:
+            if type.lower() == 'boolean':
+                pair = "COALESCE(IF({name},'1','0'),'NNULLL') AS {name}, COALESCE(IF(LAG({name}) OVER w,'1','0'),'NNULLL') AS lag_{name}".format(name=name)
+            else:
+                pair = "COALESCE({name},'NNULLL') AS {name}, COALESCE(LAG({name}) OVER w,'NNULLL') AS lag_{name}".format(name=name)
+            coalesce_pairs.append(pair)
+
+        return ', '.join(coalesce_pairs)
+
     @property
     def insert_query(self):
         # Convert back from the NULL marker to return actual null values, but skip the first (id) column.
         input_columns = ', '.join(["IF(t.{name} = 'NNULLL', NULL, t.{name}) AS {name}".format(name=name) for name in self.source_column_names[1:]])
         # For intermediate work, convert NULLs to NULL marker.
-        intermediate_columns = ', '.join(["COALESCE({name},'NNULLL') AS {name}, COALESCE(LAG({name}) OVER w,'NNULLL') AS lag_{name}".format(name=name)
-                                          for name in self.source_column_names])
+        intermediate_columns = self.intermediate_columns()
         where_clause = " OR ".join(["t.{name} <> t.lag_{name}".format(name=name) for name in self.source_column_names[1:]])
         query = """
         SELECT id, {input_columns},
