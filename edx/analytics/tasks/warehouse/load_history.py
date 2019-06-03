@@ -10,7 +10,44 @@ from edx.analytics.tasks.insights.database_imports import (
     ImportProductCatalog,
     ImportProductCatalogClass,
     ImportStudentCourseEnrollmentTask,
+    ImportAuthUserTask,
+    ImportAuthUserProfileTask,
+    ImportCouponVoucherIndirectionState,
+    ImportCouponVoucherState,
+    ImportCourseEntitlementTask,
+    ImportCurrentOrderDiscountState,
+    ImportCurrentOrderLineState,
+    ImportCurrentOrderState,
+    ImportCurrentRefundRefundLineState,
+    ImportEcommercePartner,
+    ImportEcommerceUser,
+    ImportProductCatalogAttributes,
+    ImportProductCatalogAttributeValues,
+    ImportShoppingCartCertificateItem,
+    ImportShoppingCartCoupon,
+    ImportShoppingCartCouponRedemption,
+    ImportShoppingCartCourseRegistrationCodeItem,
+    ImportShoppingCartDonation,
+    ImportShoppingCartOrder,
+    ImportShoppingCartOrderItem,
+    ImportShoppingCartPaidCourseRegistration,
 )
+from edx.analytics.tasks.enterprise.enterprise_database_imports import (
+    ImportBenefitTask,
+    ImportConditionalOfferTask,
+    ImportDataSharingConsentTask,
+    ImportEnterpriseCourseEnrollmentUserTask,
+    ImportEnterpriseCustomerTask,
+    ImportEnterpriseCustomerUserTask,
+    ImportStockRecordTask,
+    ImportUserSocialAuthTask,
+    ImportVoucherTask
+)
+# Of these, which contain fields that are > 80 characters long?  Cannot tell from
+# the column definitions on import, because they are STRINGs.  Could look at outputs on
+# join, but probably better to actually look at individual column values, and do
+# MAX(LENGTH(a)).  Fortunately, course_id seems okay, on enrollment table.
+# Workaround:  change VARCHAR to VARCHAR(255) for all STRINGS.  Done.
 
 from edx.analytics.tasks.util.hive import hive_database_name, HivePartition, HiveTableTask, WarehouseMixin
 from edx.analytics.tasks.util.url import get_target_from_url
@@ -195,7 +232,6 @@ class BaseHiveHistoryTask(DatabaseImportMixin, HiveTableTask):
 class LoadHiveHistoryToWarehouse(WarehouseMixin, VerticaCopyTask):
     
     date = luigi.DateParameter()
-    # n_reduce_tasks = luigi.Parameter()
 
     source_task = None
 
@@ -222,7 +258,7 @@ class LoadHiveHistoryToWarehouse(WarehouseMixin, VerticaCopyTask):
     def columns(self):
         # convert Hive columns to Vertica columns.
         source_columns = self.insert_source_task.columns
-        columns = [(name, 'INT' if type=='INT' else 'VARCHAR') for (name, type) in source_columns]
+        columns = [(name, 'INT' if type=='INT' else 'VARCHAR(255)') for (name, type) in source_columns]
         return columns
 
     @property
@@ -246,6 +282,11 @@ class LoadHiveHistoryToWarehouse(WarehouseMixin, VerticaCopyTask):
             }
             self.source_task = self.source_import_class(**kwargs)
         return self.source_task        
+
+
+############################################
+# Define Loads for individual source classes
+############################################
 
 
 class ProductCatalogClassHiveHistoryTask(BaseHiveHistoryTask):
@@ -288,3 +329,459 @@ class LoadStudentCourseEnrollmentHiveHistoryToWarehouse(LoadHiveHistoryToWarehou
     @property
     def source_import_class(self):
         return StudentCourseEnrollmentHiveHistoryTask
+
+
+class HiveHistoryAuthUserTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportAuthUserTask
+
+
+class LoadHiveHistoryAuthUserTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryAuthUserTask
+
+
+class HiveHistoryAuthUserProfileTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportAuthUserProfileTask
+
+class LoadHiveHistoryAuthUserProfileTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryAuthUserProfileTask
+
+
+class HiveHistoryCouponVoucherIndirectionState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCouponVoucherIndirectionState
+
+class LoadHiveHistoryCouponVoucherIndirectionStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCouponVoucherIndirectionState
+
+
+class HiveHistoryCouponVoucherState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCouponVoucherState
+
+class LoadHiveHistoryCouponVoucherStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCouponVoucherState
+
+
+class HiveHistoryCourseEntitlementTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCourseEntitlementTask
+
+class LoadHiveHistoryCourseEntitlementTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCourseEntitlementTask
+
+
+class HiveHistoryCurrentOrderDiscountState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCurrentOrderDiscountState
+
+class LoadHiveHistoryCurrentOrderDiscountStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCurrentOrderDiscountState
+
+
+class HiveHistoryCurrentOrderLineState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCurrentOrderLineState
+
+class LoadHiveHistoryCurrentOrderLineStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCurrentOrderLineState
+
+
+class HiveHistoryCurrentOrderState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCurrentOrderState
+
+class LoadHiveHistoryCurrentOrderStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCurrentOrderState
+
+
+class HiveHistoryCurrentRefundRefundLineState(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportCurrentRefundRefundLineState
+
+class LoadHiveHistoryCurrentRefundRefundLineStateToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryCurrentRefundRefundLineState
+
+
+class HiveHistoryEcommercePartner(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportEcommercePartner
+
+
+class LoadHiveHistoryEcommercePartnerToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryEcommercePartner
+
+
+class HiveHistoryEcommerceUser (BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportEcommerceUser
+
+
+class LoadHiveHistoryEcommerceUserToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryEcommerceUser
+
+
+class HiveHistoryProductCatalogAttributes(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportProductCatalogAttributes
+
+
+class LoadHiveHistoryProductCatalogAttributesToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryProductCatalogAttributes
+
+
+class HiveHistoryProductCatalogAttributeValues(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportProductCatalogAttributeValues
+
+class LoadHiveHistoryProductCatalogAttributeValuesToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryProductCatalogAttributeValues
+
+
+class HiveHistoryShoppingCartCertificateItem(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartCertificateItem
+
+class LoadHiveHistoryShoppingCartCertificateItemToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartCertificateItem
+
+
+class HiveHistoryShoppingCartCoupon(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartCoupon
+
+class LoadHiveHistoryShoppingCartCouponToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartCoupon
+
+
+class HiveHistoryShoppingCartCouponRedemption(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartCouponRedemption
+
+class LoadHiveHistoryShoppingCartCouponRedemptionToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartCouponRedemption
+
+
+class HiveHistoryShoppingCartCourseRegistrationCodeItem(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartCourseRegistrationCodeItem
+
+class LoadHiveHistoryShoppingCartCourseRegistrationCodeItemToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartCourseRegistrationCodeItem
+
+
+class HiveHistoryShoppingCartDonation(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartDonation
+
+class LoadHiveHistoryShoppingCartDonationToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartDonation
+
+
+class HiveHistoryShoppingCartOrder(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartOrder
+
+class LoadHiveHistoryShoppingCartOrderToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartOrder
+
+
+class HiveHistoryShoppingCartOrderItem(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartOrderItem
+
+class LoadHiveHistoryShoppingCartOrderItemToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartOrderItem
+
+
+class HiveHistoryShoppingCartPaidCourseRegistration(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportShoppingCartPaidCourseRegistration
+
+class LoadHiveHistoryShoppingCartPaidCourseRegistrationToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryShoppingCartPaidCourseRegistration
+
+
+class HiveHistoryBenefitTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportBenefitTask
+
+class LoadHiveHistoryBenefitTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryBenefitTask
+
+
+class HiveHistoryConditionalOfferTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportConditionalOfferTask
+
+class LoadHiveHistoryConditionalOfferTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryConditionalOfferTask
+
+
+class HiveHistoryDataSharingConsentTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportDataSharingConsentTask
+
+class LoadHiveHistoryDataSharingConsentTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryDataSharingConsentTask
+
+
+class HiveHistoryEnterpriseCourseEnrollmentUserTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportEnterpriseCourseEnrollmentUserTask
+
+class LoadHiveHistoryEnterpriseCourseEnrollmentUserTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryEnterpriseCourseEnrollmentUserTask
+
+
+class HiveHistoryEnterpriseCustomerTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportEnterpriseCustomerTask
+
+class LoadHiveHistoryEnterpriseCustomerTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryEnterpriseCustomerTask
+
+
+class HiveHistoryEnterpriseCustomerUserTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportEnterpriseCustomerUserTask
+
+class LoadHiveHistoryEnterpriseCustomerUserTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryEnterpriseCustomerUserTask
+
+
+class HiveHistoryStockRecordTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportStockRecordTask
+
+class LoadHiveHistoryStockRecordTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryStockRecordTask
+
+
+class HiveHistoryUserSocialAuthTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportUserSocialAuthTask
+
+class LoadHiveHistoryUserSocialAuthTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryUserSocialAuthTask
+
+
+class HiveHistoryVoucherTask(BaseHiveHistoryTask):
+
+    @property
+    def source_import_class(self):
+        return ImportVoucherTask
+
+class LoadHiveHistoryVoucherTaskToWarehouse(LoadHiveHistoryToWarehouse):
+
+    @property
+    def source_import_class(self):
+        return HiveHistoryVoucherTask
+
+
+class LoadHistoryWorkflow(WarehouseMixin, luigi.WrapperTask):
+
+    date = luigi.DateParameter()
+
+    # We are not using VerticaCopyTaskMixin as OverwriteOutputMixin changes the complete() method behavior.
+    schema = luigi.Parameter(
+        config_path={'section': 'vertica-export', 'name': 'schema'},
+        description='The schema to which to write.',
+    )
+    credentials = luigi.Parameter(
+        config_path={'section': 'vertica-export', 'name': 'credentials'},
+        description='Path to the external access credentials file.',
+    )
+
+    """
+    Provides entry point for loading data into warehouse.
+    """
+
+    def requires(self):
+        kwargs = {
+            'date': self.date,
+            'schema': self.schema,
+            'credentials': self.credentials,
+            'warehouse_path': self.warehouse_path,
+        }
+        yield (
+            LoadHiveHistoryAuthUserTaskToWarehouse(**kwargs),
+            LoadHiveHistoryAuthUserProfileTaskToWarehouse(**kwargs),
+            LoadHiveHistoryCouponVoucherIndirectionStateToWarehouse(**kwargs),
+            LoadHiveHistoryCouponVoucherStateToWarehouse(**kwargs),
+            LoadHiveHistoryCourseEntitlementTaskToWarehouse(**kwargs),
+            LoadHiveHistoryCurrentOrderDiscountStateToWarehouse(**kwargs),
+            LoadHiveHistoryCurrentOrderLineStateToWarehouse(**kwargs),
+            LoadHiveHistoryCurrentOrderStateToWarehouse(**kwargs),
+            LoadHiveHistoryCurrentRefundRefundLineStateToWarehouse(**kwargs),
+            LoadHiveHistoryEcommercePartnerToWarehouse(**kwargs),
+            LoadHiveHistoryEcommerceUserToWarehouse(**kwargs),
+            LoadHiveHistoryProductCatalogAttributesToWarehouse(**kwargs),
+            LoadHiveHistoryProductCatalogAttributeValuesToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartCertificateItemToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartCouponToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartCouponRedemptionToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartCourseRegistrationCodeItemToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartDonationToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartOrderToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartOrderItemToWarehouse(**kwargs),
+            LoadHiveHistoryShoppingCartPaidCourseRegistrationToWarehouse(**kwargs),
+            LoadHiveHistoryBenefitTaskToWarehouse(**kwargs),
+            LoadHiveHistoryConditionalOfferTaskToWarehouse(**kwargs),
+            LoadHiveHistoryDataSharingConsentTaskToWarehouse(**kwargs),
+            LoadHiveHistoryEnterpriseCourseEnrollmentUserTaskToWarehouse(**kwargs),
+            LoadHiveHistoryEnterpriseCustomerTaskToWarehouse(**kwargs),
+            LoadHiveHistoryEnterpriseCustomerUserTaskToWarehouse(**kwargs),
+            LoadHiveHistoryStockRecordTaskToWarehouse(**kwargs),
+            LoadHiveHistoryUserSocialAuthTaskToWarehouse(**kwargs),
+            LoadHiveHistoryVoucherTaskToWarehouse(**kwargs),
+        )
+
+    def output(self):
+        return [task.output() for task in self.requires()]
