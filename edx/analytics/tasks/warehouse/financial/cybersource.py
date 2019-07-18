@@ -6,6 +6,8 @@ import datetime
 import logging
 import os
 
+from CyberSource import ReportDownloadsApi
+from CyberSource.rest import ApiException
 import luigi
 import requests
 from luigi import date_interval
@@ -38,9 +40,8 @@ class PullFromCybersourceTaskMixin(OverwriteOutputMixin):
 
         config = get_config()
         section_name = 'cybersource:' + self.merchant_id
-        self.host = config.get(section_name, 'host')
-        self.username = config.get(section_name, 'username')
-        self.password = config.get(section_name, 'password')
+        self.keyid = config.get(section_name, 'keyid')
+        self.secretkey = config.get(section_name, 'secretkey')
         self.interval_start = luigi.DateParameter().parse(config.get(section_name, 'interval_start'))
 
         self.merchant_close_date = None
@@ -71,7 +72,7 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
     # This is the table that we had been using for gathering and
     # storing historical Cybersource data.  It adds one additional
     # column over the 'PaymentBatchDetailReport' format.
-    REPORT_NAME = 'PaymentSubmissionDetailReport'
+    REPORT_NAME = 'PaymentSubmissionDetailReport_Daily_Classic'
     REPORT_FORMAT = 'csv'
 
     def requires(self):
@@ -79,18 +80,30 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
 
     def run(self):
         self.remove_output_on_overwrite()
-        auth = (self.username, self.password)
-        response = requests.get(self.query_url, auth=auth)
-        if response.status_code != requests.codes.ok:  # pylint: disable=no-member
-            msg = "Encountered status {} on request to Cybersource for {}".format(response.status_code, self.run_date)
+        merchant_config = {
+            'authentication_type': 'http_signature',
+            'merchantid': self.merchant_id,
+            'run_environment': 'CyberSource.Environment.PRODUCTION',
+            'merchant_keyid': self.keyid,
+            'merchant_secretkey': self.secretkey,
+        }
+        report_download_obj = ReportDownloadsApi(merchant_config)
+        try:
+            return_data, status, body = report_download_obj.download_report(
+                self.run_date.isoformat(),
+                self.REPORT_NAME,
+                organization_id=self.merchant_id
+            )
+        except ApiException as e:
+            log.error("Exception when calling ReportDownloadsApi->download_report: %s", e)
+            raise
+
+        if status != requests.codes.ok:
+            msg = "Encountered status {} on request to Cybersource for {}".format(status, self.run_date)
             raise Exception(msg)
 
-        # if there are no transactions in response, there will be no merchant id.
-        if self.merchant_id not in response.content and not self.is_empty_transaction_allowed:
-            raise Exception('No transactions to process.')
-
         with self.output().open('w') as output_file:
-            output_file.write(response.content)
+            output_file.write(body)
 
     def output(self):
         """Output is in the form {output_root}/cybersource/{CCYY-mm}/cybersource_{merchant}_{CCYYmmdd}.csv"""
@@ -104,22 +117,11 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
         url_with_filename = url_path_join(self.output_root, "cybersource", month_year_string, filename)
         return get_target_from_url(url_with_filename)
 
-    @property
-    def query_url(self):
-        """Generate the url to download a report from a Cybersource account."""
-        slashified_date = self.run_date.strftime('%Y/%m/%d')  # pylint: disable=no-member
-        url = 'https://{host}/DownloadReport/{date}/{merchant_id}/{report_name}.{report_format}'.format(
-            host=self.host,
-            date=slashified_date,
-            merchant_id=self.merchant_id,
-            report_name=self.REPORT_NAME,
-            report_format=self.REPORT_FORMAT
-        )
-        return url
-
 
 TRANSACTION_TYPE_MAP = {
     'ics_bill': 'sale',
+    'ics_auth,ics_bill': 'sale',
+    'ics_bill, ics_auth': 'sale',
     'ics_credit': 'refund'
 }
 
@@ -180,11 +182,11 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                         row['amount'],
                         # Transaction fee
                         r'\N',
-                        TRANSACTION_TYPE_MAP[row['transaction_type']],
+                        TRANSACTION_TYPE_MAP[row['ics_applications']],
                         # We currently only process credit card transactions with Cybersource
                         'credit_card',
                         # Type of credit card used
-                        row['payment_method'].lower().replace(' ', '_'),
+                        row['payment_type'].lower().replace(' ', '_'),
                         # Identifier for the transaction.
                         row['request_id'],
                     ]
