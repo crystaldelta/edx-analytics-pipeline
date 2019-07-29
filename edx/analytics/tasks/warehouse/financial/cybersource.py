@@ -1,6 +1,7 @@
 """Collect information about payments from third-party sources for financial reporting."""
 from __future__ import absolute_import
 
+import codecs
 import csv
 import datetime
 import logging
@@ -162,7 +163,7 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
             # Skip the first line, which provides information about the source
             # of the file.  The second line should define the column headings.
             _download_header = input_file.readline()
-            reader = csv.DictReader(input_file, delimiter=',')
+            reader = csv.DictReader(codecs.iterdecode(input_file, 'utf-8'), delimiter=',')
             with self.output().open('w') as output_file:
                 for row in reader:
                     # Output most of the fields from the original source.
