@@ -168,8 +168,8 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                     #   batch_id: CyberSource batch in which the transaction was sent.
                     #   payment_processor: code for organization that processes the payment.
                     result = [
-                        # Date
-                        row['batch_date'],
+                        # Date(Using the REST API Cybersource returns the timestamp).
+                        row['batch_date'].split('T')[0],
                         # Name of system.
                         'cybersource',
                         # CyberSource merchant ID used for the transaction.
