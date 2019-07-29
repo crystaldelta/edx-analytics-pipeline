@@ -92,18 +92,21 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
             'enable_log': False,
         }
         report_download_obj = ReportDownloadsApi(merchant_config)
+
+        # With the REST API, to get the same report we got with the servlets method, we need to specify `date + 1`.
+        batch_date = self.run_date + datetime.timedelta(days=1)
         try:
             return_data, status, body = report_download_obj.download_report(
-                self.run_date.isoformat(),
+                batch_date.isoformat(),
                 self.REPORT_NAME,
                 organization_id=self.merchant_id
             )
         except ApiException as e:
-            log.error("Exception while downloading report for date(%s): %s", self.run_date.isoformat(), e)
+            log.error("Exception while downloading report for date(%s): %s", batch_date.isoformat(), e)
             raise
 
         if status != requests.codes.ok:
-            msg = "Encountered status {} on request to Cybersource for {}".format(status, self.run_date)
+            msg = "Encountered status {} on request to Cybersource for {}".format(status, batch_date)
             raise Exception(msg)
 
         with self.output().open('w') as output_file:
