@@ -86,6 +86,7 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
             'run_environment': 'CyberSource.Environment.PRODUCTION',
             'merchant_keyid': self.keyid,
             'merchant_secretkey': self.secretkey,
+            'enable_log': False,
         }
         report_download_obj = ReportDownloadsApi(merchant_config)
         try:
@@ -103,7 +104,7 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
             raise Exception(msg)
 
         with self.output().open('w') as output_file:
-            output_file.write(body)
+            output_file.write(body.encode('utf-8'))
 
     def output(self):
         """Output is in the form {output_root}/cybersource/{CCYY-mm}/cybersource_{merchant}_{CCYYmmdd}.csv"""
