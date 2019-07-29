@@ -170,6 +170,15 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                     # The values not included are:
                     #   batch_id: CyberSource batch in which the transaction was sent.
                     #   payment_processor: code for organization that processes the payment.
+
+                    # Cybersource servlets reports used to return a negative amount in case of a refund.
+                    # However, the REST API does not, so we manually append a minus(-).
+                    transaction_type = self.get_transaction_type(row['ics_applications'])
+                    if transaction_type == 'refund' and float(row['amount']) > 0:
+                        row_amount = '-' + row['amount']
+                    else:
+                        row_amount = row['amount']
+
                     result = [
                         # Date(Using the REST API Cybersource returns the timestamp).
                         row['batch_date'].split('T')[0],
@@ -183,10 +192,10 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                         row['merchant_ref_number'],
                         # ISO currency code used for the transaction.
                         row['currency'],
-                        row['amount'],
+                        row_amount,
                         # Transaction fee
                         r'\N',
-                        self.get_transaction_type(row['ics_applications']),
+                        transaction_type,
                         # We currently only process credit card transactions with Cybersource
                         'credit_card',
                         # Type of credit card used
