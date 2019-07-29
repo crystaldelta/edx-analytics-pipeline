@@ -194,8 +194,8 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                         # Identifier for the transaction.
                         row['request_id'],
                     ]
-                    output_file.write('\t'.join(result))
-                    output_file.write('\n')
+                    output_file.write(b'\t'.join(field.encode('utf-8') for field in result))
+                    output_file.write(b'\n')
 
     def output(self):
         """
