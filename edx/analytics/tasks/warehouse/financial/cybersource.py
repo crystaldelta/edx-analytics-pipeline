@@ -74,6 +74,8 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
     # column over the 'PaymentBatchDetailReport' format.
     REPORT_NAME = 'PaymentSubmissionDetailReport_Daily_Classic'
     REPORT_FORMAT = 'csv'
+    # Specify the production/live environemnt for report downloads.
+    ENVIRONMENT = 'CyberSource.Environment.PRODUCTION'
 
     def requires(self):
         pass
@@ -83,7 +85,7 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
         merchant_config = {
             'authentication_type': 'http_signature',
             'merchantid': self.merchant_id,
-            'run_environment': 'CyberSource.Environment.PRODUCTION',
+            'run_environment': self.ENVIRONMENT,
             'merchant_keyid': self.keyid,
             'merchant_secretkey': self.secretkey,
             'enable_log': False,
@@ -96,7 +98,7 @@ class DailyPullFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                 organization_id=self.merchant_id
             )
         except ApiException as e:
-            log.error("Exception when calling ReportDownloadsApi->download_report: %s", e)
+            log.error("Exception while downloading report for date(%s): %s", self.run_date.isoformat(), e)
             raise
 
         if status != requests.codes.ok:
@@ -183,7 +185,7 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
                         row['amount'],
                         # Transaction fee
                         r'\N',
-                        TRANSACTION_TYPE_MAP[row['ics_applications']],
+                        self.get_transaction_type(row['ics_applications']),
                         # We currently only process credit card transactions with Cybersource
                         'credit_card',
                         # Type of credit card used
@@ -205,6 +207,12 @@ class DailyProcessFromCybersourceTask(PullFromCybersourceTaskMixin, luigi.Task):
         filename = "cybersource_{}.tsv".format(self.merchant_id)
         url_with_filename = url_path_join(self.output_root, "payments", partition_path_spec, filename)
         return get_target_from_url(url_with_filename)
+
+    def get_transaction_type(self, ics_applications):
+        if 'ics_bill' in ics_applications:
+            return 'sale'
+        elif 'ics_credit' in ics_applications:
+            return 'refund'
 
 
 class IntervalPullFromCybersourceTask(PullFromCybersourceTaskMixin, WarehouseMixin, luigi.WrapperTask):
